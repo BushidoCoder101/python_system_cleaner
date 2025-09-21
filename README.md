@@ -18,6 +18,7 @@ The --console (or -c) flag ensures that a console window opens when the applicat
 
 After running the command, PyInstaller will create a new directory named dist in your current folder. Inside the dist directory, you'll find your new executable file (e.g., my_app.exe on Windows or my_app on macOS/Linux).
 
+
 Here are the command-line interface (CLI) references for your app.
 
 Command Structure
@@ -39,3 +40,27 @@ Flag	Description
 --defrag	Selects the "Defragment Disk" task. This option is only effective on Windows HDDs.
 --large-old	Selects the "Find Large & Old Files" task.
 --empty-dirs	Selects the "Remove Empty Directories" task.
+
+Export to Sheets
+Examples
+To clean all items:
+
+Bash
+
+cleanup_app.exe --cli --all
+To analyze only temporary files and the recycle bin:
+
+Bash
+
+cleanup_app.exe --cli --analyze --temp --trash
+To run a cleanup for caches and prefetch files:
+
+Bash
+
+cleanup_app.exe --cli --cache --prefetch
+To find large and old files without cleaning anything:
+
+Bash
+
+cleanup_app.exe --cli --large-old
+
