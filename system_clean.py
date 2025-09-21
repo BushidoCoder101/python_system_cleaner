@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QIcon
 import qtawesome as qta
+import argparse
 
 # Import winshell for Windows-specific functions if the OS is Windows
 if platform.system() == "Windows":
@@ -717,8 +718,80 @@ class CleanupApp(QMainWindow):
         self.progress_bar.setValue(100)
         self.worker = None
 
+# --- New CLI Mode Functions ---
+
+def run_cli_mode(args):
+    """
+    Executes cleanup tasks in a non-GUI, command-line mode.
+    """
+    class CLILogger:
+        """A simple class to mimic the GUI's logging for CLI mode."""
+        def log_message(self, message):
+            print(f"{datetime.now().strftime('[%H:%M:%S]')} {message}")
+
+    tasks_to_run = []
+    if args.all:
+        tasks_to_run = [
+            "clean_temp_files", "empty_trash", "clean_caches",
+            "clean_prefetch", "defragment_disk", "find_large_old_files",
+            "remove_empty_dirs"
+        ]
+    else:
+        if args.temp:
+            tasks_to_run.append("clean_temp_files")
+        if args.trash:
+            tasks_to_run.append("empty_trash")
+        if args.cache:
+            tasks_to_run.append("clean_caches")
+        if args.prefetch:
+            tasks_to_run.append("clean_prefetch")
+        if args.defrag:
+            tasks_to_run.append("defragment_disk")
+        if args.large_old:
+            tasks_to_run.append("find_large_old_files")
+        if args.empty_dirs:
+            tasks_to_run.append("remove_empty_dirs")
+
+    if not tasks_to_run:
+        print("No tasks selected. Use --help for available options.")
+        return
+
+    worker = Worker(tasks_to_run, is_analysis_mode=args.analyze)
+    worker.log_message.connect(CLILogger().log_message)
+    # CLI doesn't need progress updates or task finished signals
+    worker.run()
+
+    if args.analyze:
+        results = worker.analysis_results
+        total_size = sum(results.values())
+        print("\n--- Analysis Report ---")
+        for task, size in results.items():
+            if size > 0:
+                print(f"  - {task}: {convert_bytes(size)}")
+        print(f"\nTotal Potential Space Savings: {convert_bytes(total_size)}")
+
+
+# --- Main Execution Block ---
+
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = CleanupApp()
-    window.show()
-    sys.exit(app.exec())
+    parser = argparse.ArgumentParser(description="Advanced System Cleanup Utility. Runs GUI by default. Use flags to run via CLI.")
+    parser.add_argument("--cli", action="store_true", help="Run in command-line interface mode.")
+    parser.add_argument("--analyze", action="store_true", help="Perform analysis only in CLI mode, don't clean.")
+    parser.add_argument("--all", action="store_true", help="Select all cleanup tasks in CLI mode.")
+    parser.add_argument("--temp", action="store_true", help="Clean temporary files.")
+    parser.add_argument("--trash", action="store_true", help="Empty recycle bin/trash.")
+    parser.add_argument("--cache", action="store_true", help="Clean system and browser caches.")
+    parser.add_argument("--prefetch", action="store_true", help="Clean Prefetch files (Windows only).")
+    parser.add_argument("--defrag", action="store_true", help="Defragment disk (Windows HDD only).")
+    parser.add_argument("--large-old", action="store_true", help="Find large and old files.")
+    parser.add_argument("--empty-dirs", action="store_true", help="Remove empty directories.")
+    
+    args = parser.parse_args()
+
+    if args.cli:
+        run_cli_mode(args)
+    else:
+        app = QApplication(sys.argv)
+        window = CleanupApp()
+        window.show()
+        sys.exit(app.exec())
